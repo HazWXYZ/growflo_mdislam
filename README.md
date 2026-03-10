@@ -25,7 +25,7 @@ A web application that helps users search for plants, learn how to care for them
 ### 1. Clone the repo
 
 ```
-git clone <your-repo-url>
+git clone https://github.com/HazWXYZ/growflo_mdislam
 cd GrowFlo
 ```
 
