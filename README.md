@@ -36,11 +36,6 @@ cd backend
 npm install
 ```
 
-Edit the `.env` file and add your Perenual API key:
-
-```
-PERENUAL_API_KEY=your_key_here
-```
 
 Get a free API key at: https://perenual.com/docs/api
 
