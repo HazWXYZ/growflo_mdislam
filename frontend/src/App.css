@@ -1,4 +1,4 @@
-/* === GrowFlo Global Styles === */
+/* GrowFlo Global Styles */
 
 * {
   margin: 0;
@@ -35,7 +35,7 @@ body {
   padding-top: 70px;
 }
 
-/* === Navbar === */
+/* Navbar */
 .navbar {
   position: fixed;
   top: 0;
@@ -107,7 +107,7 @@ body {
   margin-right: 4px;
 }
 
-/* === Auth Modal === */
+/* Auth Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -191,7 +191,7 @@ body {
   margin-bottom: 0.9rem;
 }
 
-/* === Buttons === */
+/*  Buttons  */
 .btn-primary {
   background-color: var(--green-mid);
   color: var(--white);
@@ -268,7 +268,7 @@ body {
   font-size: 0.82rem !important;
 }
 
-/* === Page Header === */
+/*  Page Header */
 .page-header {
   background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
   color: var(--white);
@@ -289,7 +289,7 @@ body {
   margin: 0 auto;
 }
 
-/* === Home Page === */
+/*  Home Page  */
 .home-hero {
   background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 60%, var(--green-light) 100%);
   padding: 4rem 2rem;

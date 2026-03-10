@@ -22,6 +22,8 @@ A web application that helps users search for plants, learn how to care for them
 
 ## Setup Instructions
 
+### Api key from: https://perenual.com/docs/api
+
 ### 1. Clone the repo
 
 ```
@@ -36,8 +38,6 @@ cd backend
 npm install
 ```
 
-
-Get a free API key at: https://perenual.com/docs/api
 
 Start the backend:
 
@@ -54,38 +54,6 @@ npm start
 ```
 
 The frontend runs on `http://localhost:3000` and the backend on `http://localhost:5000`. The React dev server proxies API calls to the backend automatically.
-
-## Project Structure
-
-```
-GrowFlo/
-├── backend/
-│   ├── server.js
-│   ├── .env
-│   ├── middleware/
-│   │   └── auth.js
-│   ├── models/
-│   │   ├── User.js
-│   │   └── Plant.js
-│   └── routes/
-│       ├── auth.js
-│       ├── plants.js
-│       └── search.js
-└── frontend/
-    ├── public/
-    └── src/
-        ├── App.jsx
-        ├── App.css
-        ├── context/
-        │   └── AuthContext.jsx
-        ├── components/
-        │   └── Navbar.jsx
-        └── pages/
-            ├── Home.jsx
-            ├── Tracker.jsx
-            ├── EasyGrows.jsx
-            └── About.jsx
-```
 
 ## API Routes
 
