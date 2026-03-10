@@ -103,14 +103,14 @@ function Home() {
     }
   };
 
-  const formatWatering = (watering) => {
-    if (!watering) return 'Unknown';
-    return watering;
-  };
-
   const formatSunlight = (sunlight) => {
-    if (!sunlight || sunlight.length === 0) return 'Unknown';
-    return sunlight.join(', ');
+    if (!sunlight) return null;
+    if (Array.isArray(sunlight)) {
+      if (sunlight.length === 0) return null;
+      return sunlight.join(', ');
+    }
+    // sometimes the API returns it as a plain string
+    return sunlight;
   };
 
   return (
@@ -174,15 +174,24 @@ function Home() {
                     </p>
 
                     <div className="plant-info-badges">
-                      <span className="badge badge-water">
-                        💧 {formatWatering(plant.watering)}
-                      </span>
-                      <span className="badge badge-sun">
-                        ☀️ {formatSunlight(plant.sunlight)}
-                      </span>
+                      {plant.watering && (
+                        <span className="badge badge-water">
+                          💧 {plant.watering}
+                        </span>
+                      )}
+                      {formatSunlight(plant.sunlight) && (
+                        <span className="badge badge-sun">
+                          ☀️ {formatSunlight(plant.sunlight)}
+                        </span>
+                      )}
                       {plant.pruning_month && plant.pruning_month.length > 0 && (
                         <span className="badge badge-prune">
                           ✂️ Prune: {plant.pruning_month.slice(0, 2).join(', ')}
+                        </span>
+                      )}
+                      {!plant.watering && (!plant.sunlight || plant.sunlight.length === 0) && (!plant.pruning_month || plant.pruning_month.length === 0) && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                          No care data available
                         </span>
                       )}
                     </div>

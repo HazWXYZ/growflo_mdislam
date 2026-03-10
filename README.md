@@ -4,7 +4,7 @@ A web application that helps users search for plants, learn how to care for them
 
 ## What It Does
 
-- **Search plants** using the Perenual API — get watering, sunlight, and pruning info
+- **Search plants** using the Perenual API 
 - **Track your plants** with a personal dashboard (full CRUD)
 - **Easy Grows page** — 5 recommended beginner-friendly plants
 - **User accounts** — simple username/password auth, no email required
