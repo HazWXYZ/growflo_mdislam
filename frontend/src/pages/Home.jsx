@@ -3,33 +3,50 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const isUpgradeMsg = (val) =>
+const isUpgrade = (val) =>
   typeof val === 'string' && val.toLowerCase().includes('upgrade');
 
-const formatWatering = (watering) => {
-  if (!watering || isUpgradeMsg(watering)) return null;
-  return watering;
+// exact watering values from the Perenual API: frequent, average, minimum, none
+const WATER_LEVELS = {
+  'frequent': { label: '💧💧💧 Frequent', bg: '#fee2e2', color: '#b91c1c' },
+  'average':  { label: '💧💧 Average',    bg: '#dbeafe', color: '#1d4ed8' },
+  'minimum':  { label: '💧 Minimum',      bg: '#e0f2fe', color: '#0369a1' },
+  'none':     { label: '🚫 None',         bg: '#f1f5f9', color: '#64748b' },
 };
 
-const formatSunlight = (sunlight) => {
-  if (!sunlight) return null;
-  if (Array.isArray(sunlight)) {
-    if (sunlight.length === 0) return null;
-    const filtered = sunlight.filter((s) => !isUpgradeMsg(s));
-    return filtered.length > 0 ? filtered.join(', ') : null;
-  }
-  if (isUpgradeMsg(sunlight)) return null;
-  return sunlight;
+// exact sunlight values from the Perenual API: full_shade, part_shade, sun-part_shade, full_sun
+const SUN_LEVELS = {
+  'full_sun':       { label: '☀️ Full Sun',       bg: '#fef3c7', color: '#92400e' },
+  'sun-part_shade': { label: '🌤️ Sun-Part Shade', bg: '#fef9c3', color: '#a16207' },
+  'part_shade':     { label: '⛅ Part Shade',      bg: '#dcfce7', color: '#166534' },
+  'full_shade':     { label: '🌑 Full Shade',      bg: '#e2e8f0', color: '#334155' },
 };
 
+const getWaterStyle = (watering) => {
+  if (!watering || isUpgrade(watering)) return null;
+  const key = watering.toLowerCase().trim();
+  return WATER_LEVELS[key] || { label: `💧 ${watering}`, bg: '#dbeafe', color: '#1d4ed8' };
+};
+
+const getSunStyles = (sunlight) => {
+  if (!sunlight) return [];
+  const arr = Array.isArray(sunlight) ? sunlight : [sunlight];
+  return arr
+    .filter((s) => s && !isUpgrade(s))
+    .map((s) => {
+      const key = s.toLowerCase().trim().replace(/\s+/g, '_');
+      return SUN_LEVELS[key] || { label: `☀️ ${s}`, bg: '#fef9c3', color: '#a16207' };
+    });
+};
+
+// ---- Name modal ----
 function NamePlantModal({ plant, onClose, onConfirm }) {
   const [nickname, setNickname] = useState('');
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="name-modal-box" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>x</button>
-        <h2>Name Your Plant</h2>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Name Your Plant 🌱</h2>
         <p>
           You're adding <strong>{plant.common_name}</strong> to your tracker.
           Give it a nickname!
@@ -48,7 +65,7 @@ function NamePlantModal({ plant, onClose, onConfirm }) {
             onClick={() => nickname && onConfirm(nickname)}
             disabled={!nickname.trim()}
           >
-            Start Tracking
+            Start Tracking!
           </button>
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
         </div>
@@ -57,13 +74,28 @@ function NamePlantModal({ plant, onClose, onConfirm }) {
   );
 }
 
+// ---- Care badge component ----
+function CareBadge({ bg, color, label }) {
+  return (
+    <span
+      className="care-badge"
+      style={{ background: bg, color }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ---- Main Home ----
 function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [details, setDetails] = useState({}); // keyed by plant id
   const [loading, setLoading] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
   const [selectedPlant, setSelectedPlant] = useState(null);
@@ -75,12 +107,38 @@ function Home() {
     setError('');
     setSearched(true);
     setResults([]);
+    setDetails({});
+
     try {
       const res = await axios.get(`/api/search?q=${encodeURIComponent(query)}`);
-      setResults(res.data.data || []);
+      const plants = res.data.data || [];
+      setResults(plants);
+      setLoading(false);
+
+      // fetch details for all results in parallel
+      // the upgrade-message filter handles any locked fields gracefully
+      const toFetch = plants.slice(0, 12);
+      if (toFetch.length > 0) {
+        setLoadingDetails(true);
+        const detailRequests = toFetch.map((p) =>
+          axios.get(`/api/search/details/${p.id}`)
+            .then((r) => ({ id: p.id, data: r.data }))
+            .catch((err) => {
+              console.warn(`details fetch failed for id ${p.id}:`, err.message);
+              return null;
+            })
+        );
+        const settled = await Promise.all(detailRequests);
+        const detailMap = {};
+        settled.forEach((item) => {
+          if (item) detailMap[item.id] = item.data;
+        });
+        console.log('[details map]', detailMap);
+        setDetails(detailMap);
+        setLoadingDetails(false);
+      }
     } catch (err) {
       setError('Search failed. Make sure the backend is running and your API key is set.');
-    } finally {
       setLoading(false);
     }
   };
@@ -88,10 +146,10 @@ function Home() {
   const handleTrackPlant = async (nickname) => {
     if (!user) return;
     try {
-      const sunlight = selectedPlant.sunlight
-        ? Array.isArray(selectedPlant.sunlight)
-          ? selectedPlant.sunlight[0]
-          : selectedPlant.sunlight
+      const d = details[selectedPlant.id];
+      const sunlightRaw = d?.sunlight || selectedPlant.sunlight;
+      const sunshine = sunlightRaw
+        ? Array.isArray(sunlightRaw) ? sunlightRaw[0] : sunlightRaw
         : 'Full Sun';
 
       await axios.post(
@@ -101,7 +159,7 @@ function Home() {
           plantName: selectedPlant.common_name,
           age: '1 week',
           environment: 'Outdoor',
-          sunshine: sunlight,
+          sunshine,
           lastWatered: new Date().toISOString().split('T')[0],
           size: 'Seedling',
         },
@@ -119,9 +177,9 @@ function Home() {
   return (
     <div>
       <div className="home-hero">
-        <h1>GrowFlo</h1>
+        <h1>🌿 GrowFlo</h1>
         <p className="tagline">
-          Search any plant and learn how to care for it. Then track your own garden.
+          Search any plant and learn how to care for it. Then track your own garden!
         </p>
         <div className="search-bar-container">
           <input
@@ -146,7 +204,7 @@ function Home() {
               style={{ background: 'none', border: 'none', color: 'var(--green-dark)', fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito' }}
               onClick={() => navigate('/tracker')}
             >
-              View Tracker
+              View Tracker →
             </button>
           </div>
         )}
@@ -160,64 +218,95 @@ function Home() {
 
         {results.length > 0 && (
           <>
-            <h2>Results for "{query}"</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.2rem', flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0 }}>Results for "{query}"</h2>
+              {loadingDetails && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                  Loading care data...
+                </span>
+              )}
+            </div>
+
             <div className="plant-cards-grid">
-              {results.slice(0, 12).map((plant) => (
-                <div key={plant.id} className="plant-card">
-                  {plant.default_image?.small_url ? (
-                    <img
-                      className="plant-card-img"
-                      src={plant.default_image.small_url}
-                      alt={plant.common_name}
-                    />
-                  ) : (
-                    <div className="plant-card-img-placeholder">No Image</div>
-                  )}
+              {results.slice(0, 12).map((plant) => {
+                const d = details[plant.id];
+                const watering = d?.watering || plant.watering;
+                const sunlight = d?.sunlight || plant.sunlight;
+                const waterStyle = getWaterStyle(watering);
+                const sunStyles = getSunStyles(sunlight);
+                const hasCareData = waterStyle || sunStyles.length > 0;
 
-                  <div className="plant-card-body">
-                    <h3>{plant.common_name || 'Unknown Plant'}</h3>
-                    <p className="scientific-name">{plant.scientific_name?.[0] || ''}</p>
+                return (
+                  <div key={plant.id} className="plant-card">
+                    {plant.default_image?.small_url ? (
+                      <img
+                        className="plant-card-img"
+                        src={plant.default_image.small_url}
+                        alt={plant.common_name}
+                      />
+                    ) : (
+                      <div className="plant-card-img-placeholder">🌱</div>
+                    )}
 
-                    <div className="plant-info-badges">
-                      {formatWatering(plant.watering) && (
-                        <span className="badge badge-water">
-                          Water: {formatWatering(plant.watering)}
-                        </span>
-                      )}
-                      {formatSunlight(plant.sunlight) && (
-                        <span className="badge badge-sun">
-                          Sun: {formatSunlight(plant.sunlight)}
-                        </span>
-                      )}
-                      {plant.pruning_month && plant.pruning_month.length > 0 && (
-                        <span className="badge badge-prune">
-                          Prune: {plant.pruning_month.slice(0, 2).join(', ')}
-                        </span>
+                    <div className="plant-card-body">
+                      <h3>{plant.common_name || 'Unknown Plant'}</h3>
+                      <p className="scientific-name">{plant.scientific_name?.[0] || ''}</p>
+
+                      <div className="plant-care-section">
+                        {!d && loadingDetails ? (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                            Loading care info...
+                          </span>
+                        ) : hasCareData ? (
+                          <>
+                            {waterStyle && (
+                              <div className="care-row">
+                                <span className="care-row-label">Water</span>
+                                <CareBadge {...waterStyle} />
+                              </div>
+                            )}
+                            {sunStyles.length > 0 && (
+                              <div className="care-row">
+                                <span className="care-row-label">Sun</span>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  {sunStyles.map((s, i) => (
+                                    <CareBadge key={i} {...s} />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                            No care data available
+                          </span>
+                        )}
+                      </div>
+
+                      {user ? (
+                        <button
+                          className="btn-primary"
+                          style={{ width: '100%', fontSize: '0.85rem', marginTop: '0.8rem' }}
+                          onClick={() => setSelectedPlant(plant)}
+                        >
+                          + Track This Plant
+                        </button>
+                      ) : (
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', textAlign: 'center', marginTop: '0.8rem' }}>
+                          Log in to track this plant
+                        </p>
                       )}
                     </div>
-
-                    {user ? (
-                      <button
-                        className="btn-primary"
-                        style={{ width: '100%', fontSize: '0.85rem' }}
-                        onClick={() => setSelectedPlant(plant)}
-                      >
-                        + Track This Plant
-                      </button>
-                    ) : (
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', textAlign: 'center' }}>
-                        Log in to track this plant
-                      </p>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
 
         {!searched && (
           <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
             <p style={{ color: 'var(--text-light)', fontSize: '1rem' }}>
               Type a plant name above and press Search or hit Enter
             </p>
