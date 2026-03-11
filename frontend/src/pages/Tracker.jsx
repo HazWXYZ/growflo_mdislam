@@ -2,15 +2,39 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
+// converts a date string to "X days" / "today" / "yesterday"
+const daysAgo = (dateStr) => {
+  if (!dateStr) return '—';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const date = new Date(dateStr);
+  date.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - date) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 0) return `In ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''}`;
+  return `${diff} day${diff !== 1 ? 's' : ''}`;
+};
+
+// formats a date string as a readable label e.g. "Mar 5, 2025"
+const formatDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+// returns today's date as YYYY-MM-DD for default values
+const todayStr = () => new Date().toISOString().split('T')[0];
+
 function PlantForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(
     initial || {
       name: '',
       plantName: '',
-      age: '',
+      age: todayStr(),       // "started growing on" date
       environment: 'Indoor',
       sunshine: 'Full Sun',
-      lastWatered: '',
+      lastWatered: todayStr(),
       size: 'Seedling',
     }
   );
@@ -54,12 +78,12 @@ function PlantForm({ initial, onSave, onCancel }) {
 
       <div className="form-row">
         <div className="form-group">
-          <label>Age / How Long Growing</label>
+          <label>Growing Since</label>
           <input
+            type="date"
             name="age"
             value={form.age}
             onChange={handleChange}
-            placeholder="e.g. 3 weeks, 2 months"
           />
         </div>
         <div className="form-group">
@@ -93,7 +117,7 @@ function PlantForm({ initial, onSave, onCancel }) {
         </div>
       </div>
 
-      <div className="form-row">
+      <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
         <div className="form-group">
           <label>Current Size</label>
           <select name="size" value={form.size} onChange={handleChange}>
@@ -127,11 +151,8 @@ function Tracker() {
   const authHeader = { headers: { Authorization: `Bearer ${user?.token}` } };
 
   useEffect(() => {
-    if (user) {
-      fetchPlants();
-    } else {
-      setLoading(false);
-    }
+    if (user) fetchPlants();
+    else setLoading(false);
   }, [user]);
 
   const fetchPlants = async () => {
@@ -155,7 +176,7 @@ function Tracker() {
       const res = await axios.post('/api/plants', formData, authHeader);
       setPlants([res.data, ...plants]);
       setShowAddForm(false);
-      showSuccess('Plant added to your tracker!');
+      showSuccess('Plant added to your tracker! 🌱');
     } catch (err) {
       setError('Failed to add plant');
     }
@@ -166,7 +187,7 @@ function Tracker() {
       const res = await axios.put(`/api/plants/${id}`, formData, authHeader);
       setPlants(plants.map((p) => (p._id === id ? res.data : p)));
       setEditingId(null);
-      showSuccess('Plant updated!');
+      showSuccess('Plant updated! ✏️');
     } catch (err) {
       setError('Failed to update plant');
     }
@@ -183,17 +204,15 @@ function Tracker() {
     }
   };
 
-  // one-click watered today button
   const handleWatered = async (plant) => {
-    const today = new Date().toISOString().split('T')[0];
     try {
       const res = await axios.put(
         `/api/plants/${plant._id}`,
-        { ...plant, lastWatered: today },
+        { ...plant, lastWatered: todayStr() },
         authHeader
       );
       setPlants(plants.map((p) => (p._id === plant._id ? res.data : p)));
-      showSuccess(`"${plant.name}" marked as watered today!`);
+      showSuccess(`"${plant.name}" marked as watered today! 💧`);
     } catch (err) {
       setError('Failed to update watering date');
     }
@@ -224,7 +243,7 @@ function Tracker() {
           className="btn-primary"
           onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); }}
         >
-          {showAddForm ? 'Cancel' : '+ Add Plant'}
+          {showAddForm ? '✕ Cancel' : '+ Add Plant'}
         </button>
       </div>
 
@@ -232,15 +251,12 @@ function Tracker() {
       {error && <div className="alert-error">{error}</div>}
 
       {showAddForm && (
-        <PlantForm
-          onSave={handleAdd}
-          onCancel={() => setShowAddForm(false)}
-        />
+        <PlantForm onSave={handleAdd} onCancel={() => setShowAddForm(false)} />
       )}
 
       {plants.length === 0 && !showAddForm && (
         <div className="empty-state">
-          <div className="empty-icon"></div>
+          <div className="empty-icon">🪴</div>
           <p>You haven't tracked any plants yet!</p>
           <button className="btn-primary" onClick={() => setShowAddForm(true)}>
             Add Your First Plant
@@ -255,10 +271,10 @@ function Tracker() {
               initial={{
                 name: plant.name,
                 plantName: plant.plantName,
-                age: plant.age,
+                age: plant.age || todayStr(),
                 environment: plant.environment,
                 sunshine: plant.sunshine,
-                lastWatered: plant.lastWatered,
+                lastWatered: plant.lastWatered || todayStr(),
                 size: plant.size,
               }}
               onSave={(data) => handleUpdate(plant._id, data)}
@@ -274,11 +290,8 @@ function Tracker() {
                   )}
                 </div>
                 <div className="tracked-plant-actions">
-                  <button
-                    className="btn-watered btn-sm"
-                    onClick={() => handleWatered(plant)}
-                  >
-                    Watered Today
+                  <button className="btn-watered btn-sm" onClick={() => handleWatered(plant)}>
+                    💧 Watered Today
                   </button>
                   <button
                     className="btn-ghost btn-sm"
@@ -296,22 +309,34 @@ function Tracker() {
               </div>
 
               <div className="plant-fields-grid">
+                {/* Age as days since start date */}
                 <div className="field-box">
-                  <div className="field-label">Age</div>
-                  <div className="field-value">{plant.age || '—'}</div>
+                  <div className="field-label">Growing For</div>
+                  <div className="field-value">{daysAgo(plant.age)}</div>
+                  {plant.age && (
+                    <div className="field-subtext">since {formatDate(plant.age)}</div>
+                  )}
                 </div>
+
                 <div className="field-box">
                   <div className="field-label">Environment</div>
                   <div className="field-value">{plant.environment || '—'}</div>
                 </div>
+
                 <div className="field-box">
                   <div className="field-label">Sunshine</div>
                   <div className="field-value">{plant.sunshine || '—'}</div>
                 </div>
+
+                {/* Last watered with days ago */}
                 <div className="field-box">
                   <div className="field-label">Last Watered</div>
-                  <div className="field-value">{plant.lastWatered || '—'}</div>
+                  <div className="field-value">{daysAgo(plant.lastWatered)}</div>
+                  {plant.lastWatered && (
+                    <div className="field-subtext">{formatDate(plant.lastWatered)}</div>
+                  )}
                 </div>
+
                 <div className="field-box">
                   <div className="field-label">Size</div>
                   <div className="field-value">{plant.size || '—'}</div>
