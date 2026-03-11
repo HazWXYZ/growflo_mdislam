@@ -44,20 +44,7 @@ function About() {
           </p>
         </div>
 
-        <div className="about-section">
-          <h2>Why "GrowFlo"?</h2>
-          <p>
-            The name is a mashup of "grow" and "flow" — the idea that plant care should
-            be something that flows naturally into your routine, not a stressful checklist.
-            When you know how to care for a plant and you can track its progress over time,
-            growing becomes genuinely enjoyable.
-          </p>
-          <p>
-            This app was built as a capstone project for a full-stack web development
-            course. It uses the MERN stack (MongoDB, Express, React, Node.js) and pulls
-            plant data from the Perenual API.
-          </p>
-        </div>
+
       </div>
     </div>
   );
