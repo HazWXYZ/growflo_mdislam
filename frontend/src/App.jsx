@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Tracker from './pages/Tracker';
 import EasyGrows from './pages/EasyGrows';
 import About from './pages/About';
+import Zones from './pages/Zones';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <Route path="/tracker" element={<Tracker />} />
             <Route path="/easy-grows" element={<EasyGrows />} />
             <Route path="/about" element={<About />} />
+            <Route path="/zones" element={<Zones />} />
           </Routes>
         </div>
       </Router>

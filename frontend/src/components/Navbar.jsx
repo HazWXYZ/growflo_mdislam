@@ -59,6 +59,7 @@ function Navbar() {
           <li><NavLink to="/">Home</NavLink></li>
           <li><NavLink to="/tracker">My Tracker</NavLink></li>
           <li><NavLink to="/easy-grows">Easy Grows</NavLink></li>
+          <li><NavLink to="/zones">Zones</NavLink></li>
           <li><NavLink to="/about">About</NavLink></li>
 
           {user ? (

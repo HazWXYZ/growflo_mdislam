@@ -39,6 +39,31 @@ const getSunStyles = (sunlight) => {
     });
 };
 
+// cycle badge colors
+const CYCLE_STYLES = {
+  'perennial':  { label: '🔄 Perennial',  bg: '#dcfce7', color: '#166534' },
+  'annual':     { label: '1️⃣ Annual',     bg: '#fef9c3', color: '#a16207' },
+  'biennial':   { label: '2️⃣ Biennial',   bg: '#ede9fe', color: '#5b21b6' },
+  'biannual':   { label: '2️⃣ Biannual',   bg: '#ede9fe', color: '#5b21b6' },
+};
+
+const getCycleStyle = (cycle) => {
+  if (!cycle || isUpgrade(cycle)) return null;
+  const key = cycle.toLowerCase().trim();
+  return CYCLE_STYLES[key] || { label: `🔄 ${cycle}`, bg: '#dcfce7', color: '#166534' };
+};
+
+// hardiness zone — returns a colored label based on zone number
+const getHardinessStyle = (min, max) => {
+  if (!min && !max) return null;
+  const zone = min || max;
+  // zones 1-4 cold, 5-7 moderate, 8-10 warm, 11-13 tropical
+  if (zone <= 4)  return { label: `❄️ Zone ${min}–${max}`, bg: '#e0f2fe', color: '#0369a1' };
+  if (zone <= 7)  return { label: `🌿 Zone ${min}–${max}`, bg: '#dcfce7', color: '#166534' };
+  if (zone <= 10) return { label: `☀️ Zone ${min}–${max}`, bg: '#fef3c7', color: '#92400e' };
+  return           { label: `🌴 Zone ${min}–${max}`, bg: '#fde8e2', color: '#c2410c' };
+};
+
 // ---- Name modal ----
 function NamePlantModal({ plant, onClose, onConfirm }) {
   const [nickname, setNickname] = useState('');
@@ -177,7 +202,7 @@ function Home() {
   return (
     <div>
       <div className="home-hero">
-        <h1>🌿 GrowFlo</h1>
+        <h1>GrowFlo</h1>
         <p className="tagline">
           Search any plant and learn how to care for it. Then track your own garden!
         </p>
@@ -276,7 +301,46 @@ function Home() {
                               </div>
                             )}
                           </>
-                        ) : (
+                        ) : null}
+
+                        {/* edible / cycle / hardiness — shown whenever detail data exists */}
+                        {d && (() => {
+                          const cycleStyle = getCycleStyle(d.cycle);
+                          const hardinessStyle = getHardinessStyle(d.hardiness?.min, d.hardiness?.max);
+                          const edible = d.edible_fruit || d.edible;
+                          const poisonous = d.poisonous;
+                          return (
+                            <>
+                              {cycleStyle && (
+                                <div className="care-row">
+                                  <span className="care-row-label">Cycle</span>
+                                  <CareBadge {...cycleStyle} />
+                                </div>
+                              )}
+                              {hardinessStyle && (
+                                <div className="care-row">
+                                  <span className="care-row-label">Zone</span>
+                                  <CareBadge {...hardinessStyle} />
+                                </div>
+                              )}
+                              {(edible !== null && edible !== undefined) && (
+                                <div className="care-row">
+                                  <span className="care-row-label">Edible</span>
+                                  <CareBadge
+                                    label={edible ? '✅ Edible' : '🚫 Not Edible'}
+                                    bg={edible ? '#dcfce7' : '#fee2e2'}
+                                    color={edible ? '#166534' : '#b91c1c'}
+                                  />
+                                  {poisonous && (
+                                    <CareBadge label="☠️ Poisonous" bg="#fde8e2" color="#c0392b" />
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+
+                        {!d && !loadingDetails && (
                           <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
                             No care data available
                           </span>
@@ -306,7 +370,6 @@ function Home() {
 
         {!searched && (
           <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
             <p style={{ color: 'var(--text-light)', fontSize: '1rem' }}>
               Type a plant name above and press Search or hit Enter
             </p>
