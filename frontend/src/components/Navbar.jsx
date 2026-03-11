@@ -30,10 +30,8 @@ function Navbar() {
       setError('Please fill in all fields');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
       const res = await axios.post(endpoint, { username, password });
@@ -46,7 +44,6 @@ function Navbar() {
     }
   };
 
-  // let the user press Enter to submit
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleSubmit();
   };
@@ -55,7 +52,7 @@ function Navbar() {
     <>
       <nav className="navbar">
         <Link to="/" className="navbar-brand">
-          🌿 <span>GrowFlo</span>
+          GrowFlo
         </Link>
 
         <ul className="navbar-links">
@@ -81,8 +78,11 @@ function Navbar() {
             </>
           ) : (
             <li>
-              <button onClick={openLogin} className="navbar-links nav-auth-btn"
-                style={{ cursor: 'pointer', fontFamily: 'Nunito', border: 'none', fontWeight: 700 }}>
+              <button
+                onClick={openLogin}
+                className="navbar-links nav-auth-btn"
+                style={{ cursor: 'pointer', fontFamily: 'Nunito', border: 'none', fontWeight: 700 }}
+              >
                 Login / Sign Up
               </button>
             </li>
@@ -93,7 +93,7 @@ function Navbar() {
       {showModal && (
         <div className="modal-overlay" onClick={handleClose}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
-            <button className="modal-close" onClick={handleClose}>✕</button>
+            <button className="modal-close" onClick={handleClose}>x</button>
             <h2>{isRegister ? 'Create Account' : 'Welcome Back'}</h2>
 
             {error && <div className="modal-error">{error}</div>}

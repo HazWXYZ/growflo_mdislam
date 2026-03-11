@@ -3,15 +3,33 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// modal to name the plant before tracking it
+const isUpgradeMsg = (val) =>
+  typeof val === 'string' && val.toLowerCase().includes('upgrade');
+
+const formatWatering = (watering) => {
+  if (!watering || isUpgradeMsg(watering)) return null;
+  return watering;
+};
+
+const formatSunlight = (sunlight) => {
+  if (!sunlight) return null;
+  if (Array.isArray(sunlight)) {
+    if (sunlight.length === 0) return null;
+    const filtered = sunlight.filter((s) => !isUpgradeMsg(s));
+    return filtered.length > 0 ? filtered.join(', ') : null;
+  }
+  if (isUpgradeMsg(sunlight)) return null;
+  return sunlight;
+};
+
 function NamePlantModal({ plant, onClose, onConfirm }) {
   const [nickname, setNickname] = useState('');
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="name-modal-box" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>✕</button>
-        <h2>Name Your Plant 🌱</h2>
+        <button className="modal-close" onClick={onClose}>x</button>
+        <h2>Name Your Plant</h2>
         <p>
           You're adding <strong>{plant.common_name}</strong> to your tracker.
           Give it a nickname!
@@ -30,7 +48,7 @@ function NamePlantModal({ plant, onClose, onConfirm }) {
             onClick={() => nickname && onConfirm(nickname)}
             disabled={!nickname.trim()}
           >
-            Start Tracking!
+            Start Tracking
           </button>
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
         </div>
@@ -48,19 +66,15 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
-
-  // which plant is being added to tracker
   const [selectedPlant, setSelectedPlant] = useState(null);
   const [addSuccess, setAddSuccess] = useState('');
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-
     setLoading(true);
     setError('');
     setSearched(true);
     setResults([]);
-
     try {
       const res = await axios.get(`/api/search?q=${encodeURIComponent(query)}`);
       setResults(res.data.data || []);
@@ -73,12 +87,11 @@ function Home() {
 
   const handleTrackPlant = async (nickname) => {
     if (!user) return;
-
     try {
-      const token = user.token;
-      // build the tracker entry from what we got back from the API
       const sunlight = selectedPlant.sunlight
-        ? selectedPlant.sunlight[0]
+        ? Array.isArray(selectedPlant.sunlight)
+          ? selectedPlant.sunlight[0]
+          : selectedPlant.sunlight
         : 'Full Sun';
 
       await axios.post(
@@ -92,7 +105,7 @@ function Home() {
           lastWatered: new Date().toISOString().split('T')[0],
           size: 'Seedling',
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
       setSelectedPlant(null);
@@ -103,23 +116,12 @@ function Home() {
     }
   };
 
-  const formatSunlight = (sunlight) => {
-    if (!sunlight) return null;
-    if (Array.isArray(sunlight)) {
-      if (sunlight.length === 0) return null;
-      return sunlight.join(', ');
-    }
-    // sometimes the API returns it as a plain string
-    return sunlight;
-  };
-
   return (
     <div>
-      {/* hero search section */}
       <div className="home-hero">
-        <h1>🌿 GrowFlo</h1>
+        <h1>GrowFlo</h1>
         <p className="tagline">
-          Search any plant and learn how to care for it. Then track your own garden!
+          Search any plant and learn how to care for it. Then track your own garden.
         </p>
         <div className="search-bar-container">
           <input
@@ -136,15 +138,20 @@ function Home() {
         </div>
       </div>
 
-      {/* results */}
       <div className="search-results-section">
-        {addSuccess && <div className="alert-success">{addSuccess} <button
-          style={{ background: 'none', border: 'none', color: 'var(--green-dark)', fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito' }}
-          onClick={() => navigate('/tracker')}
-        >View Tracker →</button></div>}
+        {addSuccess && (
+          <div className="alert-success">
+            {addSuccess}{' '}
+            <button
+              style={{ background: 'none', border: 'none', color: 'var(--green-dark)', fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito' }}
+              onClick={() => navigate('/tracker')}
+            >
+              View Tracker
+            </button>
+          </div>
+        )}
 
         {error && <div className="alert-error">{error}</div>}
-
         {loading && <p className="loading-text">Searching plants...</p>}
 
         {!loading && searched && results.length === 0 && !error && (
@@ -164,34 +171,27 @@ function Home() {
                       alt={plant.common_name}
                     />
                   ) : (
-                    <div className="plant-card-img-placeholder">🌱</div>
+                    <div className="plant-card-img-placeholder">No Image</div>
                   )}
 
                   <div className="plant-card-body">
                     <h3>{plant.common_name || 'Unknown Plant'}</h3>
-                    <p className="scientific-name">
-                      {plant.scientific_name?.[0] || ''}
-                    </p>
+                    <p className="scientific-name">{plant.scientific_name?.[0] || ''}</p>
 
                     <div className="plant-info-badges">
-                      {plant.watering && (
+                      {formatWatering(plant.watering) && (
                         <span className="badge badge-water">
-                          💧 {plant.watering}
+                          Water: {formatWatering(plant.watering)}
                         </span>
                       )}
                       {formatSunlight(plant.sunlight) && (
                         <span className="badge badge-sun">
-                          ☀️ {formatSunlight(plant.sunlight)}
+                          Sun: {formatSunlight(plant.sunlight)}
                         </span>
                       )}
                       {plant.pruning_month && plant.pruning_month.length > 0 && (
                         <span className="badge badge-prune">
-                          ✂️ Prune: {plant.pruning_month.slice(0, 2).join(', ')}
-                        </span>
-                      )}
-                      {!plant.watering && (!plant.sunlight || plant.sunlight.length === 0) && (!plant.pruning_month || plant.pruning_month.length === 0) && (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                          No care data available
+                          Prune: {plant.pruning_month.slice(0, 2).join(', ')}
                         </span>
                       )}
                     </div>
@@ -216,10 +216,8 @@ function Home() {
           </>
         )}
 
-        {/* show something on the homepage before any search */}
         {!searched && (
           <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
             <p style={{ color: 'var(--text-light)', fontSize: '1rem' }}>
               Type a plant name above and press Search or hit Enter
             </p>
@@ -227,7 +225,6 @@ function Home() {
         )}
       </div>
 
-      {/* naming modal */}
       {selectedPlant && (
         <NamePlantModal
           plant={selectedPlant}

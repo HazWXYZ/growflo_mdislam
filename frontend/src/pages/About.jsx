@@ -7,7 +7,6 @@ function About() {
       </div>
 
       <div className="about-page">
-
         <div className="about-section">
           <h2>What is GrowFlo?</h2>
           <p>
@@ -25,24 +24,6 @@ function About() {
 
         <div className="about-section">
           <h2>What Can You Do Here?</h2>
-          <div className="about-icon-row">
-            <div className="about-icon-item">
-              <div className="icon-circle">🔍</div>
-              <span>Search Plants</span>
-            </div>
-            <div className="about-icon-item">
-              <div className="icon-circle">📋</div>
-              <span>Track Growth</span>
-            </div>
-            <div className="about-icon-item">
-              <div className="icon-circle">💧</div>
-              <span>Care Reminders</span>
-            </div>
-            <div className="about-icon-item">
-              <div className="icon-circle">🌱</div>
-              <span>Beginner Tips</span>
-            </div>
-          </div>
           <p style={{ marginTop: '1.2rem' }}>
             Use the search on the home page to look up any plant and see its watering needs,
             sunlight requirements, and pruning schedule. Then add it to your tracker to log
@@ -77,7 +58,6 @@ function About() {
             plant data from the Perenual API.
           </p>
         </div>
-
       </div>
     </div>
   );

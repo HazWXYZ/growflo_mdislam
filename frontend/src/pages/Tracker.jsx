@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-// form to add or edit a plant
 function PlantForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(
     initial || {
@@ -94,7 +93,7 @@ function PlantForm({ initial, onSave, onCancel }) {
         </div>
       </div>
 
-      <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <div className="form-row">
         <div className="form-group">
           <label>Current Size</label>
           <select name="size" value={form.size} onChange={handleChange}>
@@ -127,7 +126,6 @@ function Tracker() {
 
   const authHeader = { headers: { Authorization: `Bearer ${user?.token}` } };
 
-  // fetch all tracked plants when page loads
   useEffect(() => {
     if (user) {
       fetchPlants();
@@ -157,7 +155,7 @@ function Tracker() {
       const res = await axios.post('/api/plants', formData, authHeader);
       setPlants([res.data, ...plants]);
       setShowAddForm(false);
-      showSuccess('Plant added to your tracker! 🌱');
+      showSuccess('Plant added to your tracker!');
     } catch (err) {
       setError('Failed to add plant');
     }
@@ -168,7 +166,7 @@ function Tracker() {
       const res = await axios.put(`/api/plants/${id}`, formData, authHeader);
       setPlants(plants.map((p) => (p._id === id ? res.data : p)));
       setEditingId(null);
-      showSuccess('Plant updated! ✏️');
+      showSuccess('Plant updated!');
     } catch (err) {
       setError('Failed to update plant');
     }
@@ -185,7 +183,22 @@ function Tracker() {
     }
   };
 
-  // not logged in
+  // one-click watered today button
+  const handleWatered = async (plant) => {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const res = await axios.put(
+        `/api/plants/${plant._id}`,
+        { ...plant, lastWatered: today },
+        authHeader
+      );
+      setPlants(plants.map((p) => (p._id === plant._id ? res.data : p)));
+      showSuccess(`"${plant.name}" marked as watered today!`);
+    } catch (err) {
+      setError('Failed to update watering date');
+    }
+  };
+
   if (!user) {
     return (
       <div className="tracker-page">
@@ -206,12 +219,12 @@ function Tracker() {
   return (
     <div className="tracker-page">
       <div className="tracker-top">
-        <h2>🌱 My Plant Tracker</h2>
+        <h2>My Plant Tracker</h2>
         <button
           className="btn-primary"
           onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); }}
         >
-          {showAddForm ? '✕ Cancel' : '+ Add Plant'}
+          {showAddForm ? 'Cancel' : '+ Add Plant'}
         </button>
       </div>
 
@@ -227,7 +240,7 @@ function Tracker() {
 
       {plants.length === 0 && !showAddForm && (
         <div className="empty-state">
-          <div className="empty-icon">🪴</div>
+          <div className="empty-icon"></div>
           <p>You haven't tracked any plants yet!</p>
           <button className="btn-primary" onClick={() => setShowAddForm(true)}>
             Add Your First Plant
@@ -261,6 +274,12 @@ function Tracker() {
                   )}
                 </div>
                 <div className="tracked-plant-actions">
+                  <button
+                    className="btn-watered btn-sm"
+                    onClick={() => handleWatered(plant)}
+                  >
+                    Watered Today
+                  </button>
                   <button
                     className="btn-ghost btn-sm"
                     onClick={() => { setEditingId(plant._id); setShowAddForm(false); }}
